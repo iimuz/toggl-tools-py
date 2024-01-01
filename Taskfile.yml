@@ -2,7 +2,7 @@ version: "3"
 
 vars:
   # 仮想環境を作成するときに利用するpython
-  ORIGINAL_PYTHON: python310
+  ORIGINAL_PYTHON: python311
   # 仮想環境内のpython
   PYTHON:
     sh: |
@@ -54,6 +54,15 @@ tasks:
       - "{{.PYTHON}} -m ruff format ."
       - dprint fmt
       - npx prettier --write "**/*.{yml,yaml}"
+
+  daily-log:
+    desc: Display daily log.
+    cmds:
+      - "{{.PYTHON}} src/daily_log.py {{.CLI_ARGS}}"
+  summary:
+    desc: Display summary.
+    cmds:
+      - "{{.PYTHON}} src/summary.py {{.CLI_ARGS}}"
 
   # requirements.txtの更新用タスク
   # 実行後に下記の修正を手動で実施する必要がある。
