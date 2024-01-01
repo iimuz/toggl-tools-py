@@ -10,8 +10,10 @@
     "mypy",
     "numpy",
     "pycache",
+    "pydantic",
     "pyproject",
     "Taskfile",
+    "timespec",
     "Toggl",
     "venv"
   ],
