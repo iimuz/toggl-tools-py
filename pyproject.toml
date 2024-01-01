@@ -4,11 +4,14 @@ description = "summarize toggl data."
 license = { file = "LICENSE" }
 name = "toggl_tools_py"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 urls = { repository = "https://github.com/iimuz/toggl-tools-py" }
 version = "1.0.0"
 
-dependencies = []
+dependencies = [
+  "pydantic",
+  "requests",
+]
 
 [tools.setuptools.package-dir]
 toggl_tools_py = "src"
@@ -17,6 +20,7 @@ toggl_tools_py = "src"
 dev = [
   "mypy",
   "ruff",
+  "types-requests", # for requests
 ]
 test = ["pytest"]
 
