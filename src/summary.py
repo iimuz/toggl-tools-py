@@ -5,12 +5,21 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from logging import Formatter, StreamHandler
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import ClassVar, Self
 
 import requests
 from pydantic import BaseModel
 
 _logger = logging.getLogger(__name__)
+
+# consoleに標準出力するためのLogger
+logger_console = logging.getLogger("toggl_tools_py_console")
+logger_console.handlers.clear()
+logger_console.setLevel(logging.INFO)
+logger_console.addHandler(logging.StreamHandler(stream=sys.stdout))
 
 
 class _TimeEntry(BaseModel):
@@ -180,23 +189,27 @@ class _MarkdownTablePrinter:
         for duration in durations:
             project_durations[duration.project_id] += duration.duration
 
-        print("| Project | Tag | Duration |")
-        print("| :------ | :-- | -------: |")
+        logger_console.info("| Project | Tag | Duration |")
+        logger_console.info("| :------ | :-- | -------: |")
         for project_id in duration_hash:
             project_name = project_names[project_id]
             project_duration = (
                 round(project_durations[project_id] / 3600 * 4) / 4
             )  # 0.25刻みに修正
-            print(f"| {project_name} | - | {project_duration} |")
+            logger_console.info("| %s | - | %.2f |", project_name, project_duration)
 
             for tag_id, duration in duration_hash[project_id].items():
                 tag_name = tag_names[tag_id]
                 time_value = round(duration.duration / 3600 * 4) / 4  # 0.25刻みに修正
-                print(f"| {project_name} | {tag_name} | {time_value} |")
+                logger_console.info(
+                    "| %s | %s | %.2f |", project_name, tag_name, time_value
+                )
 
 
 def _main() -> None:
     """スクリプトのエントリポイント."""
+    _setup_logger(filepath=None, loglevel=logging.INFO)
+
     toggl_service = _ToggleService(api_key=None)
     start_date = datetime.fromisoformat("2023-10-10T00:00:00+09:00")
     for index in range(2):
@@ -213,6 +226,39 @@ def _main() -> None:
         _logger.info("start date: %s", current_date.strftime("%Y-%m-%d"))
         printer = _MarkdownTablePrinter()
         printer.display(durations=tag_durations, projects=project_list, tags=tags_list)
+
+
+def _setup_logger(
+    filepath: Path | None,  # ログ出力するファイルパス. Noneの場合はファイル出力しない.
+    loglevel: int,  # 出力するログレベル
+) -> None:
+    # ログ出力設定
+    # ファイル出力とコンソール出力を行うように設定する。
+    _logger.setLevel(loglevel)
+
+    # consoleログ
+    console_handler = StreamHandler(stream=sys.stderr)
+    console_handler.setLevel(loglevel)
+    console_handler.setFormatter(
+        Formatter("[%(levelname)7s] %(asctime)s (%(name)s) %(message)s")
+    )
+    _logger.addHandler(console_handler)
+
+    # ファイル出力するログ
+    # 基本的に大量に利用することを想定していないので、ログファイルは多くは残さない。
+    if filepath is not None:
+        file_handler = RotatingFileHandler(
+            filepath,
+            encoding="utf-8",
+            mode="a",
+            maxBytes=10 * 1024 * 1024,  # 10 MB
+            backupCount=1,
+        )
+        file_handler.setLevel(loglevel)
+        file_handler.setFormatter(
+            Formatter("[%(levelname)7s] %(asctime)s (%(name)s) %(message)s")
+        )
+        _logger.addHandler(file_handler)
 
 
 if __name__ == "__main__":

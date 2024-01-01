@@ -3,12 +3,21 @@ import logging
 import os
 import sys
 from datetime import datetime, timedelta, timezone
+from logging import Formatter, StreamHandler
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import Self
 
 import requests
 from pydantic import BaseModel
 
 _logger = logging.getLogger(__name__)
+
+# consoleに標準出力するためのLogger
+logger_console = logging.getLogger("toggl_tools_py_console")
+logger_console.handlers.clear()
+logger_console.setLevel(logging.INFO)
+logger_console.addHandler(logging.StreamHandler(stream=sys.stdout))
 
 
 class _TimeEntry(BaseModel):
@@ -106,17 +115,19 @@ class _MarkdownListPrinter:
                 timezone(timedelta(hours=9))
             )
             time_str = dt_tz.strftime("%H:%M")
-            print(f"- {time_str} {project_name} {entry.name}")
+            logger_console.info("- %s %s %s", time_str, project_name, entry.name)
         last_entry = time_entries[-1]
         dt_tz = datetime.fromisoformat(
             last_entry.stop.replace("Z", "+00:00")
         ).astimezone(timezone(timedelta(hours=9)))
         time_str = dt_tz.strftime("%H:%m")
-        print(f"- {time_str} 終了")
+        logger_console.info("- %s 終了", time_str)
 
 
 def _main() -> None:
     """スクリプトのエントリポイント."""
+    _setup_logger(filepath=None, loglevel=logging.INFO)
+
     toggl_service = _ToggleService(api_key=None)
     time_entries = toggl_service.get_time_entries(
         datetime.fromisoformat("2023-10-10T00:00:00+09:00"),
@@ -130,9 +141,41 @@ def _main() -> None:
     printer.display(time_entries=time_entries, projects=project_list)
 
 
+def _setup_logger(
+    filepath: Path | None,  # ログ出力するファイルパス. Noneの場合はファイル出力しない.
+    loglevel: int,  # 出力するログレベル
+) -> None:
+    # ログ出力設定
+    # ファイル出力とコンソール出力を行うように設定する。
+    _logger.setLevel(loglevel)
+
+    # consoleログ
+    console_handler = StreamHandler(stream=sys.stderr)
+    console_handler.setLevel(loglevel)
+    console_handler.setFormatter(
+        Formatter("[%(levelname)7s] %(asctime)s (%(name)s) %(message)s")
+    )
+    _logger.addHandler(console_handler)
+
+    # ファイル出力するログ
+    # 基本的に大量に利用することを想定していないので、ログファイルは多くは残さない。
+    if filepath is not None:
+        file_handler = RotatingFileHandler(
+            filepath,
+            encoding="utf-8",
+            mode="a",
+            maxBytes=10 * 1024 * 1024,  # 10 MB
+            backupCount=1,
+        )
+        file_handler.setLevel(loglevel)
+        file_handler.setFormatter(
+            Formatter("[%(levelname)7s] %(asctime)s (%(name)s) %(message)s")
+        )
+        _logger.addHandler(file_handler)
+
+
 if __name__ == "__main__":
     try:
-        logging.basicConfig(level=logging.DEBUG)
         _main()
     except Exception:
         _logger.exception("Unhandled exception occurred.")
