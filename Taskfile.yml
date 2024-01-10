@@ -2,7 +2,16 @@ version: "3"
 
 vars:
   # 仮想環境を作成するときに利用するpython
-  ORIGINAL_PYTHON: python311
+  ORIGINAL_PYTHON:
+    sh: |
+      if which python311 2>&1; then
+        # python311が明示的に利用できる場合は利用する
+        echo 'python311'
+      else
+        # python311がなければpythonを指定
+        echo 'python'
+      fi
+
   # 仮想環境内のpython
   PYTHON:
     sh: |
