@@ -1,10 +1,12 @@
 ---
 title: Toggl Tool by Python
 date: 2024-01-01
-lastmod: 2024-01-01
+lastmod: 1720401402 # 2024-07-08T10:16:42
 ---
 
 ## Overview
+
+[toggl-tools-rs](https://github.com/iimuz/toggl-tools-rs)に移行したのでアーカイブ。
 
 [Toggl](https://toggl.com/)のデータを取得して整形するツール群です。
 
